@@ -12,6 +12,7 @@ import streamlit as st
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from utils.data_manager import (
+    delete_csv_row,
     load_ball_striking,
     load_putting,
     load_short_game,
@@ -24,6 +25,42 @@ st.set_page_config(page_title="Practice Log", page_icon="📝", layout="wide")
 
 st.title("📝 Practice Log")
 st.caption("Record your practice sessions across all categories.")
+
+
+def _delete_ui(df, sheet_name, label, key_prefix):
+    """Render a delete control for a session table."""
+    if df.empty:
+        return
+    with st.expander("Delete a session", expanded=False):
+        options = []
+        for idx, row in df.iterrows():
+            d = pd.to_datetime(row["date"]).strftime("%b %d, %Y")
+            data_cols = [c for c in df.columns if c != "date"]
+            parts = []
+            for c in data_cols:
+                v = row[c]
+                if pd.notna(v) and v != 0 and v != "":
+                    try:
+                        parts.append(f"{c.replace('_', ' ').title()}: {int(float(v))}")
+                    except (ValueError, TypeError):
+                        parts.append(f"{c.replace('_', ' ').title()}: {v}")
+            summary = ", ".join(parts) if parts else "No details"
+            options.append((idx, f"{d} — {summary}"))
+
+        if not options:
+            return
+
+        selected = st.selectbox(
+            f"Select {label} session to delete",
+            options=options,
+            format_func=lambda x: x[1],
+            key=f"{key_prefix}_delete_select",
+        )
+        if st.button(f"Delete this {label} session", key=f"{key_prefix}_delete_btn", type="secondary"):
+            delete_csv_row(sheet_name, selected[0])
+            st.success("Session deleted.")
+            st.rerun()
+
 
 # ---------------------------------------------------------------------------
 # Tabs
@@ -80,7 +117,6 @@ with tab_bs:
             "crazy_shit_1x": crazy if crazy else None,
             "one_handed_pitch_3x": one_hand if one_hand else None,
         }
-        # Only save if at least one drill was logged
         drills_logged = [v for k, v in row.items() if k != "date" and v]
         if drills_logged:
             save_ball_striking_session(row)
@@ -92,14 +128,12 @@ with tab_bs:
         else:
             st.warning("Enter at least one drill before submitting.")
 
-    # Recent sessions table
     st.markdown("#### Recent Ball Striking Sessions")
     bs_df = load_ball_striking()
     if not bs_df.empty:
         display = bs_df.copy()
         display["date"] = pd.to_datetime(display["date"]).dt.strftime("%b %d, %Y")
         display = display.sort_values("date", ascending=False)
-        # Rename columns for readability
         col_map = {
             "date": "Date",
             "mechanical_no_results": "Mechanical",
@@ -113,6 +147,7 @@ with tab_bs:
         }
         display = display.rename(columns=col_map)
         st.dataframe(display, use_container_width=True, hide_index=True)
+        _delete_ui(bs_df, "ball_striking", "ball striking", "bs")
     else:
         st.info("No ball striking sessions logged yet.")
 
@@ -172,6 +207,7 @@ with tab_putt:
         }
         display = display.rename(columns=col_map)
         st.dataframe(display, use_container_width=True, hide_index=True)
+        _delete_ui(putt_df, "putting", "putting", "putt")
     else:
         st.info("No putting sessions logged yet.")
 
@@ -216,5 +252,6 @@ with tab_sg:
         col_map = {"date": "Date", "notes": "Notes", "duration_min": "Duration (min)"}
         display = display.rename(columns=col_map)
         st.dataframe(display, use_container_width=True, hide_index=True)
+        _delete_ui(sg_df, "short_game", "short game", "sg")
     else:
         st.info("No short game sessions logged yet.")

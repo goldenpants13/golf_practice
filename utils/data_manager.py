@@ -71,6 +71,14 @@ def append_csv_row(name: str, row: dict) -> None:
     save_csv(name, df)
 
 
+def delete_csv_row(name: str, idx: int) -> None:
+    """Delete a row by index from a Google Sheets worksheet."""
+    df = load_csv(name)
+    if 0 <= idx < len(df):
+        df = df.drop(index=idx).reset_index(drop=True)
+        save_csv(name, df)
+
+
 # ---------------------------------------------------------------------------
 # JSON helpers (for static reference data that ships with the repo)
 # ---------------------------------------------------------------------------

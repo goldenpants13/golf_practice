@@ -12,7 +12,7 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from utils.data_manager import load_testing, load_testing_lookup, save_testing_session
+from utils.data_manager import delete_csv_row, load_testing, load_testing_lookup, save_testing_session
 
 st.set_page_config(page_title="Short Game Testing", page_icon="🎯", layout="wide")
 
@@ -322,5 +322,33 @@ if not test_df.empty and len(test_df) > 0:
         col_map[csv_col] = shot_name
     display_df = display_df.rename(columns=col_map)
     st.dataframe(display_df, use_container_width=True, hide_index=True)
+
+    # Delete control
+    with st.expander("Delete a test session", expanded=False):
+        del_options = []
+        for idx, row in test_df.iterrows():
+            d = pd.to_datetime(row["date"]).strftime("%b %d, %Y")
+            shots = []
+            for sn, sc in zip(SHOT_TYPES, SHOT_CSV_COLS):
+                v = row.get(sc)
+                if pd.notna(v) and v != "" and v != "na":
+                    try:
+                        shots.append(f"{sn}: {int(float(v))}")
+                    except (ValueError, TypeError):
+                        pass
+            summary = ", ".join(shots) if shots else "No scores"
+            del_options.append((idx, f"{d} — {summary}"))
+
+        if del_options:
+            selected = st.selectbox(
+                "Select test session to delete",
+                options=del_options,
+                format_func=lambda x: x[1],
+                key="test_delete_select",
+            )
+            if st.button("Delete this test session", key="test_delete_btn", type="secondary"):
+                delete_csv_row("testing", selected[0])
+                st.success("Test session deleted.")
+                st.rerun()
 else:
     st.info("No test history available yet.")

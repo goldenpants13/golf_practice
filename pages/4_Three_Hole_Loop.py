@@ -13,7 +13,7 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from utils.data_manager import load_three_hole_loop, save_three_hole_loop_round
+from utils.data_manager import delete_csv_row, load_three_hole_loop, save_three_hole_loop_round
 
 st.set_page_config(page_title="3-Hole Loop", page_icon="🌙", layout="wide")
 
@@ -412,3 +412,27 @@ with col_table:
 
     display = display[show_cols].rename(columns=rename)
     st.dataframe(display, use_container_width=True, hide_index=True)
+
+# ---------------------------------------------------------------------------
+# Delete a round
+# ---------------------------------------------------------------------------
+with st.expander("Delete a round", expanded=False):
+    del_options = []
+    for idx, row in df.iterrows():
+        d = row["date"].strftime("%b %d, %Y")
+        total = int(row["total_score"])
+        vs = int(row["vs_par"])
+        vs_str = f"+{vs}" if vs > 0 else str(vs)
+        del_options.append((idx, f"{d} — Score: {total} ({vs_str})"))
+
+    if del_options:
+        selected = st.selectbox(
+            "Select round to delete",
+            options=del_options,
+            format_func=lambda x: x[1],
+            key="loop_delete_select",
+        )
+        if st.button("Delete this round", key="loop_delete_btn", type="secondary"):
+            delete_csv_row("three_hole_loop", selected[0])
+            st.success("Round deleted.")
+            st.rerun()
