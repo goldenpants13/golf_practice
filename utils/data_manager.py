@@ -137,6 +137,14 @@ def save_testing_session(row: dict) -> None:
     append_csv_row("testing", row)
 
 
+def load_three_hole_loop() -> pd.DataFrame:
+    return load_csv("three_hole_loop")
+
+
+def save_three_hole_loop_round(row: dict) -> None:
+    append_csv_row("three_hole_loop", row)
+
+
 # ---------------------------------------------------------------------------
 # Aggregation helpers (used by the dashboard)
 # ---------------------------------------------------------------------------
@@ -144,7 +152,7 @@ def save_testing_session(row: dict) -> None:
 def all_practice_dates() -> List[date]:
     """Return a sorted list of all unique dates across all practice types."""
     dates = set()
-    for name in ("ball_striking", "putting", "short_game", "testing"):
+    for name in ("ball_striking", "putting", "short_game", "testing", "three_hole_loop"):
         df = load_csv(name)
         if not df.empty and "date" in df.columns:
             for d in pd.to_datetime(df["date"]).dt.date:
@@ -155,7 +163,7 @@ def all_practice_dates() -> List[date]:
 def practice_session_counts() -> Dict[str, int]:
     """Return total session counts per practice category."""
     counts = {}
-    for name in ("ball_striking", "putting", "short_game", "testing"):
+    for name in ("ball_striking", "putting", "short_game", "testing", "three_hole_loop"):
         df = load_csv(name)
         counts[name] = len(df)
     return counts
