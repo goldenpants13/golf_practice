@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+.venv/
+venv/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Original Excel file (data already imported)
+Golf 2026.xlsx

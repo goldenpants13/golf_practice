@@ -1,0 +1,51 @@
+{
+  "big_goals": [
+    "0.0 or better handicap",
+    "Club Champion",
+    "Qualify for SC AM"
+  ],
+  "component_goals": [
+    "Have a 170+ mph driver in the bag",
+    "1 or fewer big contact mistakes a round",
+    "Stock ball flight 80%+",
+    "Medium-length+ putts average inside 10%",
+    "Scratch+ 70 yards or in",
+    "90%+ Commitment each round"
+  ],
+  "sub_goals": {
+    "Goal 1 (Driver)": [
+      "Complete Fit For Golf Strength Workout",
+      "Complete 20 Swing Speed session on fit for golf app",
+      "Complete Stack System",
+      "Able to hit 70%+ Middle of Face at Full Speed"
+    ],
+    "Goal 2 (ground)": [
+      "Able to get 20/20 in the closest towel drill",
+      "Can cleanly hit 9/10 from fairway bunker",
+      "On course divots start after the ball 90%+"
+    ],
+    "Goal 3 (flight)": [
+      "Complete a 20 shot session with 1 degree or less standard deviation of path",
+      "20 shot session with 1 degree or less face to path",
+      "Dispression within (X%) on 20 shot session"
+    ],
+    "Goal 4 (Putt)": [
+      "Able to measure slope within .5 degrees via AimPoint",
+      "Complete a 10 putt session with each falling within 10%",
+      "Create a pre-shot routine for putting"
+    ],
+    "Goal 5 (70 and in)": [
+      "Complete a random 10 yardages with getting all 10 within 2 yards of target yardage",
+      "Finish a 10 shot pitching session with all 10 inside 8 feet",
+      "10 shot chipping session averaging under 2.0 shots (ie all up and down and one or more chip-in)",
+      "Create a sand gapping system w/ 5 yards max between shots"
+    ],
+    "Goal 6 (Mental)": [
+      "Complete 20% of your practice sessions w/ the broken method",
+      "Create a pre shot routine for (Putt, ARG, Distance)",
+      "Complete 5 rounds with 100% AimPoint completion on the green",
+      "Use the same pre-shot routine for 3 rounds in a row",
+      "Get to a 75%+ commitment level on the course"
+    ]
+  }
+}

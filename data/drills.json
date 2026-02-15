@@ -1,0 +1,77 @@
+[
+  {
+    "name": "Towel drill",
+    "levels": {
+      "Level 1": "2 clubs behind",
+      "Level 2": "1 club behind",
+      "Level 3": "1/2 Club behind"
+    },
+    "description": null
+  },
+  {
+    "name": "Closed Eye",
+    "levels": {
+      "Level 1": "Pitching",
+      "Level 2": "Wedge",
+      "Level 3": "Iron",
+      "Level 4": "Wood/ Driver"
+    },
+    "description": null
+  },
+  {
+    "name": "Heel, Toe, Center",
+    "levels": {
+      "Level 1": "Pitching",
+      "Level 2": "Wedge",
+      "Level 3": "Iron",
+      "Level 4": "Wood/ Driver"
+    },
+    "description": null
+  },
+  {
+    "name": "3 Club Spray",
+    "levels": {
+      "Level 1": "On grooves",
+      "Level 2": "Middle Half",
+      "Level 3": "Sweet Spot x2"
+    },
+    "description": null
+  },
+  {
+    "name": "Wedge Ladder",
+    "levels": {
+      "Level 1": "5 yards",
+      "Level 2": "4 yards",
+      "Level 3": "3 yards",
+      "Level 4": "2 yards"
+    },
+    "description": "30 to 80 in 5 yard increments"
+  },
+  {
+    "name": "1 Hand Pitch",
+    "levels": {
+      "Level 1": "In air no shank",
+      "Level 2": "On Grooves"
+    },
+    "description": null
+  },
+  {
+    "name": "3-foot Putt",
+    "levels": {
+      "Level 1": "35 in a row",
+      "Level 2": "50 in a row",
+      "Level 3": "100 in a row"
+    },
+    "description": null
+  },
+  {
+    "name": "Guess slope",
+    "levels": {
+      "Level 1": "Within 1 degree",
+      "Level 2": "Within .75 degrees",
+      "Level 3": "Within .5 degrees",
+      "Level 4": "Within .25 degrees"
+    },
+    "description": null
+  }
+]
