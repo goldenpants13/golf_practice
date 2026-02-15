@@ -1,8 +1,7 @@
 """
 Centralized data access layer for the Golf Practice app.
-All CSV/JSON reads and writes go through this module so that
-swapping the storage backend later (e.g. for cloud deployment)
-requires changes in only one place.
+All dynamic data (practice logs, testing, rounds) is stored in Google Sheets.
+Static reference data (goals, drills, lookup tables) stays in local JSON files.
 """
 
 import json
@@ -11,54 +10,57 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
+import streamlit as st
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Google Sheets connection
 # ---------------------------------------------------------------------------
 
-def _ensure_data_dir() -> None:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-
-
-def _csv_path(name: str) -> Path:
-    return DATA_DIR / f"{name}.csv"
-
-
-def _json_path(name: str) -> Path:
-    return DATA_DIR / f"{name}.json"
+def _get_conn():
+    """Return the cached Google Sheets connection."""
+    from streamlit_gsheets import GSheetsConnection
+    return st.connection("gsheets", type=GSheetsConnection)
 
 
 # ---------------------------------------------------------------------------
-# Generic CSV helpers
+# Google Sheets helpers (replaces CSV read/write)
 # ---------------------------------------------------------------------------
 
 def load_csv(name: str) -> pd.DataFrame:
-    """Load a CSV from the data directory. Returns an empty DataFrame if the
-    file does not exist yet."""
-    path = _csv_path(name)
-    if path.exists() and path.stat().st_size > 0:
-        # Peek at columns first to avoid parse_dates errors on files
-        # that don't have a "date" column or have no data rows.
-        try:
-            df = pd.read_csv(path)
-            if "date" in df.columns and not df.empty:
-                df["date"] = pd.to_datetime(df["date"], errors="coerce")
-            return df
-        except pd.errors.EmptyDataError:
+    """Load a worksheet from Google Sheets. Returns an empty DataFrame if
+    the worksheet is empty or doesn't exist."""
+    try:
+        conn = _get_conn()
+        df = conn.read(worksheet=name, ttl="30s")
+        if df is None:
             return pd.DataFrame()
-    return pd.DataFrame()
+        # Drop fully-empty rows that gsheets sometimes returns
+        df = df.dropna(how="all")
+        if df.empty:
+            return pd.DataFrame()
+        if "date" in df.columns:
+            df["date"] = pd.to_datetime(df["date"], errors="coerce")
+        return df
+    except Exception:
+        return pd.DataFrame()
 
 
 def save_csv(name: str, df: pd.DataFrame) -> None:
-    """Overwrite the CSV in the data directory with the given DataFrame."""
-    _ensure_data_dir()
-    df.to_csv(_csv_path(name), index=False)
+    """Overwrite a worksheet in Google Sheets with the given DataFrame."""
+    conn = _get_conn()
+    # Convert datetime columns to strings for Sheets compatibility
+    df_out = df.copy()
+    for col in df_out.columns:
+        if pd.api.types.is_datetime64_any_dtype(df_out[col]):
+            df_out[col] = df_out[col].dt.strftime("%Y-%m-%d")
+    conn.update(worksheet=name, data=df_out)
+    st.cache_data.clear()
 
 
 def append_csv_row(name: str, row: dict) -> None:
-    """Append a single row to a CSV file (creates it if missing)."""
+    """Append a single row to a Google Sheets worksheet."""
     df = load_csv(name)
     new_row = pd.DataFrame([row])
     df = pd.concat([df, new_row], ignore_index=True)
@@ -66,8 +68,12 @@ def append_csv_row(name: str, row: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Generic JSON helpers
+# JSON helpers (for static reference data that ships with the repo)
 # ---------------------------------------------------------------------------
+
+def _json_path(name: str) -> Path:
+    return DATA_DIR / f"{name}.json"
+
 
 def load_json(name: str) -> Any:
     """Load a JSON file from the data directory. Returns None if missing."""
@@ -80,7 +86,7 @@ def load_json(name: str) -> Any:
 
 def save_json(name: str, data: Any) -> None:
     """Write data to a JSON file in the data directory."""
-    _ensure_data_dir()
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
     with open(_json_path(name), "w") as f:
         json.dump(data, f, indent=2, default=str)
 
@@ -103,6 +109,10 @@ def load_short_game() -> pd.DataFrame:
 
 def load_testing() -> pd.DataFrame:
     return load_csv("testing")
+
+
+def load_three_hole_loop() -> pd.DataFrame:
+    return load_csv("three_hole_loop")
 
 
 def load_goals() -> Optional[dict]:
@@ -135,10 +145,6 @@ def save_short_game_session(row: dict) -> None:
 
 def save_testing_session(row: dict) -> None:
     append_csv_row("testing", row)
-
-
-def load_three_hole_loop() -> pd.DataFrame:
-    return load_csv("three_hole_loop")
 
 
 def save_three_hole_loop_round(row: dict) -> None:
@@ -177,7 +183,6 @@ def current_streak(dates=None) -> int:
     if not dates:
         return 0
     today = date.today()
-    # Start from today or the last practice day
     if dates[-1] < today:
         check = dates[-1]
     else:

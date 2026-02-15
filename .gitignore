@@ -5,10 +5,11 @@ __pycache__/
 dist/
 build/
 
-# Environment
+# Environment & secrets
 .env
 .venv/
 venv/
+.streamlit/secrets.toml
 
 # OS files
 .DS_Store
