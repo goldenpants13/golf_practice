@@ -411,28 +411,28 @@ with col_table:
     show_cols.append("Stats")
 
     display = display[show_cols].rename(columns=rename)
-    st.dataframe(display, use_container_width=True, hide_index=True)
+    sorted_display = display.sort_values("Date", ascending=False) if "Date" in display.columns else display
+    original_indices = sorted_display.index.tolist()
+    sorted_display = sorted_display.reset_index(drop=True)
 
-# ---------------------------------------------------------------------------
-# Delete a round
-# ---------------------------------------------------------------------------
-with st.expander("Delete a round", expanded=False):
-    del_options = []
-    for idx, row in df.iterrows():
-        d = row["date"].strftime("%b %d, %Y")
-        total = int(row["total_score"])
-        vs = int(row["vs_par"])
-        vs_str = f"+{vs}" if vs > 0 else str(vs)
-        del_options.append((idx, f"{d} — Score: {total} ({vs_str})"))
+    event = st.dataframe(
+        sorted_display,
+        use_container_width=True,
+        hide_index=True,
+        on_select="rerun",
+        selection_mode="single-row",
+        key="loop_table",
+    )
 
-    if del_options:
-        selected = st.selectbox(
-            "Select round to delete",
-            options=del_options,
-            format_func=lambda x: x[1],
-            key="loop_delete_select",
-        )
-        if st.button("Delete this round", key="loop_delete_btn", type="secondary"):
-            delete_csv_row("three_hole_loop", selected[0])
+    if event.selection.rows:
+        sel_pos = event.selection.rows[0]
+        orig_idx = original_indices[sel_pos]
+        row_date = sorted_display.loc[sel_pos, "Date"] if "Date" in sorted_display.columns else ""
+        if st.button(
+            f"🗑️  Delete selected round ({row_date})",
+            key="loop_delete_btn",
+            type="secondary",
+        ):
+            delete_csv_row("three_hole_loop", orig_idx)
             st.success("Round deleted.")
             st.rerun()

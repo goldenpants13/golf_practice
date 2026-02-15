@@ -321,34 +321,30 @@ if not test_df.empty and len(test_df) > 0:
     for shot_name, csv_col in zip(SHOT_TYPES, SHOT_CSV_COLS):
         col_map[csv_col] = shot_name
     display_df = display_df.rename(columns=col_map)
-    st.dataframe(display_df, use_container_width=True, hide_index=True)
+    sorted_display = display_df.sort_values("Date", ascending=False) if "Date" in display_df.columns else display_df
+    original_indices = sorted_display.index.tolist()
+    sorted_display = sorted_display.reset_index(drop=True)
 
-    # Delete control
-    with st.expander("Delete a test session", expanded=False):
-        del_options = []
-        for idx, row in test_df.iterrows():
-            d = pd.to_datetime(row["date"]).strftime("%b %d, %Y")
-            shots = []
-            for sn, sc in zip(SHOT_TYPES, SHOT_CSV_COLS):
-                v = row.get(sc)
-                if pd.notna(v) and v != "" and v != "na":
-                    try:
-                        shots.append(f"{sn}: {int(float(v))}")
-                    except (ValueError, TypeError):
-                        pass
-            summary = ", ".join(shots) if shots else "No scores"
-            del_options.append((idx, f"{d} — {summary}"))
+    event = st.dataframe(
+        sorted_display,
+        use_container_width=True,
+        hide_index=True,
+        on_select="rerun",
+        selection_mode="single-row",
+        key="test_table",
+    )
 
-        if del_options:
-            selected = st.selectbox(
-                "Select test session to delete",
-                options=del_options,
-                format_func=lambda x: x[1],
-                key="test_delete_select",
-            )
-            if st.button("Delete this test session", key="test_delete_btn", type="secondary"):
-                delete_csv_row("testing", selected[0])
-                st.success("Test session deleted.")
-                st.rerun()
+    if event.selection.rows:
+        sel_pos = event.selection.rows[0]
+        orig_idx = original_indices[sel_pos]
+        row_date = sorted_display.loc[sel_pos, "Date"] if "Date" in sorted_display.columns else ""
+        if st.button(
+            f"🗑️  Delete selected test session ({row_date})",
+            key="test_delete_btn",
+            type="secondary",
+        ):
+            delete_csv_row("testing", orig_idx)
+            st.success("Test session deleted.")
+            st.rerun()
 else:
     st.info("No test history available yet.")

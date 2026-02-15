@@ -27,37 +27,31 @@ st.title("📝 Practice Log")
 st.caption("Record your practice sessions across all categories.")
 
 
-def _delete_ui(df, sheet_name, label, key_prefix):
-    """Render a delete control for a session table."""
-    if df.empty:
-        return
-    with st.expander("Delete a session", expanded=False):
-        options = []
-        for idx, row in df.iterrows():
-            d = pd.to_datetime(row["date"]).strftime("%b %d, %Y")
-            data_cols = [c for c in df.columns if c != "date"]
-            parts = []
-            for c in data_cols:
-                v = row[c]
-                if pd.notna(v) and v != 0 and v != "":
-                    try:
-                        parts.append(f"{c.replace('_', ' ').title()}: {int(float(v))}")
-                    except (ValueError, TypeError):
-                        parts.append(f"{c.replace('_', ' ').title()}: {v}")
-            summary = ", ".join(parts) if parts else "No details"
-            options.append((idx, f"{d} — {summary}"))
+def _show_table_with_delete(raw_df, display_df, sheet_name, label, key_prefix):
+    """Show a dataframe with row selection and a delete button."""
+    sorted_display = display_df.sort_values("Date", ascending=False) if "Date" in display_df.columns else display_df
+    original_indices = sorted_display.index.tolist()
+    sorted_display = sorted_display.reset_index(drop=True)
 
-        if not options:
-            return
+    event = st.dataframe(
+        sorted_display,
+        use_container_width=True,
+        hide_index=True,
+        on_select="rerun",
+        selection_mode="single-row",
+        key=f"{key_prefix}_table",
+    )
 
-        selected = st.selectbox(
-            f"Select {label} session to delete",
-            options=options,
-            format_func=lambda x: x[1],
-            key=f"{key_prefix}_delete_select",
-        )
-        if st.button(f"Delete this {label} session", key=f"{key_prefix}_delete_btn", type="secondary"):
-            delete_csv_row(sheet_name, selected[0])
+    if event.selection.rows:
+        sel_pos = event.selection.rows[0]
+        orig_idx = original_indices[sel_pos]
+        row_date = sorted_display.loc[sel_pos, "Date"] if "Date" in sorted_display.columns else ""
+        if st.button(
+            f"🗑️  Delete selected {label} session ({row_date})",
+            key=f"{key_prefix}_delete_btn",
+            type="secondary",
+        ):
+            delete_csv_row(sheet_name, orig_idx)
             st.success("Session deleted.")
             st.rerun()
 
@@ -133,7 +127,6 @@ with tab_bs:
     if not bs_df.empty:
         display = bs_df.copy()
         display["date"] = pd.to_datetime(display["date"]).dt.strftime("%b %d, %Y")
-        display = display.sort_values("date", ascending=False)
         col_map = {
             "date": "Date",
             "mechanical_no_results": "Mechanical",
@@ -146,8 +139,7 @@ with tab_bs:
             "one_handed_pitch_3x": "1-Hand Pitch",
         }
         display = display.rename(columns=col_map)
-        st.dataframe(display, use_container_width=True, hide_index=True)
-        _delete_ui(bs_df, "ball_striking", "ball striking", "bs")
+        _show_table_with_delete(bs_df, display, "ball_striking", "ball striking", "bs")
     else:
         st.info("No ball striking sessions logged yet.")
 
@@ -198,7 +190,6 @@ with tab_putt:
     if not putt_df.empty:
         display = putt_df.copy()
         display["date"] = pd.to_datetime(display["date"]).dt.strftime("%b %d, %Y")
-        display = display.sort_values("date", ascending=False)
         col_map = {
             "date": "Date",
             "three_foot_drill": "3-Foot Drill",
@@ -206,8 +197,7 @@ with tab_putt:
             "lag_drill": "Lag Drill",
         }
         display = display.rename(columns=col_map)
-        st.dataframe(display, use_container_width=True, hide_index=True)
-        _delete_ui(putt_df, "putting", "putting", "putt")
+        _show_table_with_delete(putt_df, display, "putting", "putting", "putt")
     else:
         st.info("No putting sessions logged yet.")
 
@@ -248,10 +238,8 @@ with tab_sg:
         display = sg_df.copy()
         if "date" in display.columns:
             display["date"] = pd.to_datetime(display["date"]).dt.strftime("%b %d, %Y")
-            display = display.sort_values("date", ascending=False)
         col_map = {"date": "Date", "notes": "Notes", "duration_min": "Duration (min)"}
         display = display.rename(columns=col_map)
-        st.dataframe(display, use_container_width=True, hide_index=True)
-        _delete_ui(sg_df, "short_game", "short game", "sg")
+        _show_table_with_delete(sg_df, display, "short_game", "short game", "sg")
     else:
         st.info("No short game sessions logged yet.")
