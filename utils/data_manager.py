@@ -33,14 +33,16 @@ def load_csv(name: str) -> pd.DataFrame:
     the worksheet is empty or doesn't exist."""
     try:
         conn = _get_conn()
-        df = conn.read(worksheet=name, ttl="30s")
+        df = conn.read(worksheet=name, ttl="0")
         if df is None:
             return pd.DataFrame()
         # Drop fully-empty rows that gsheets sometimes returns
         df = df.dropna(how="all")
         if df.empty:
             return pd.DataFrame()
+        # Clean date column -- handle "2026-02-01 0:00:00" format from Sheets
         if "date" in df.columns:
+            df["date"] = df["date"].astype(str).str.split(" ").str[0]
             df["date"] = pd.to_datetime(df["date"], errors="coerce")
         return df
     except Exception:
@@ -55,8 +57,10 @@ def save_csv(name: str, df: pd.DataFrame) -> None:
     for col in df_out.columns:
         if pd.api.types.is_datetime64_any_dtype(df_out[col]):
             df_out[col] = df_out[col].dt.strftime("%Y-%m-%d")
+        # Also handle any date strings with time components
+        if col == "date":
+            df_out[col] = df_out[col].astype(str).str.split(" ").str[0]
     conn.update(worksheet=name, data=df_out)
-    st.cache_data.clear()
 
 
 def append_csv_row(name: str, row: dict) -> None:
