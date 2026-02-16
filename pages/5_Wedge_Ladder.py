@@ -136,7 +136,7 @@ else:
                 f"Shot {i + 1}  —  Target: **{target} yards**",
                 min_value=0,
                 max_value=300,
-                value=0,
+                value=target,
                 step=1,
                 key=f"wl_shot_{i}",
             )
