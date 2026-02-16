@@ -127,6 +127,10 @@ def load_three_hole_loop() -> pd.DataFrame:
     return load_csv("three_hole_loop")
 
 
+def load_wedge_ladder() -> pd.DataFrame:
+    return load_csv("wedge_ladder")
+
+
 def load_goals() -> Optional[dict]:
     return load_json("goals")
 
@@ -163,6 +167,10 @@ def save_three_hole_loop_round(row: dict) -> None:
     append_csv_row("three_hole_loop", row)
 
 
+def save_wedge_ladder_session(row: dict) -> None:
+    append_csv_row("wedge_ladder", row)
+
+
 # ---------------------------------------------------------------------------
 # Aggregation helpers (used by the dashboard)
 # ---------------------------------------------------------------------------
@@ -170,7 +178,7 @@ def save_three_hole_loop_round(row: dict) -> None:
 def all_practice_dates() -> List[date]:
     """Return a sorted list of all unique dates across all practice types."""
     dates = set()
-    for name in ("ball_striking", "putting", "short_game", "testing", "three_hole_loop"):
+    for name in ("ball_striking", "putting", "short_game", "testing", "three_hole_loop", "wedge_ladder"):
         df = load_csv(name)
         if not df.empty and "date" in df.columns:
             for d in pd.to_datetime(df["date"]).dt.date:
@@ -181,7 +189,7 @@ def all_practice_dates() -> List[date]:
 def practice_session_counts() -> Dict[str, int]:
     """Return total session counts per practice category."""
     counts = {}
-    for name in ("ball_striking", "putting", "short_game", "testing", "three_hole_loop"):
+    for name in ("ball_striking", "putting", "short_game", "testing", "three_hole_loop", "wedge_ladder"):
         df = load_csv(name)
         counts[name] = len(df)
     return counts
