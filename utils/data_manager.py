@@ -63,17 +63,38 @@ def save_csv(name: str, df: pd.DataFrame) -> None:
     conn.update(worksheet=name, data=df_out)
 
 
+def _read_worksheet_strict(name: str) -> pd.DataFrame:
+    """Read a worksheet WITHOUT silencing errors.
+    Used by write operations so a temporary read failure never causes
+    an accidental overwrite of existing data."""
+    conn = _get_conn()
+    df = conn.read(worksheet=name, ttl="0")
+    if df is None:
+        return pd.DataFrame()
+    df = df.dropna(how="all")
+    if df.empty:
+        return pd.DataFrame()
+    if "date" in df.columns:
+        df["date"] = df["date"].astype(str).str.split(" ").str[0]
+        df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    return df
+
+
 def append_csv_row(name: str, row: dict) -> None:
-    """Append a single row to a Google Sheets worksheet."""
-    df = load_csv(name)
+    """Append a single row to a Google Sheets worksheet.
+    Uses strict read so a connection blip raises an error instead of
+    silently overwriting all existing data."""
+    df = _read_worksheet_strict(name)
     new_row = pd.DataFrame([row])
     df = pd.concat([df, new_row], ignore_index=True)
     save_csv(name, df)
 
 
 def delete_csv_row(name: str, idx: int) -> None:
-    """Delete a row by index from a Google Sheets worksheet."""
-    df = load_csv(name)
+    """Delete a row by index from a Google Sheets worksheet.
+    Uses strict read so a connection blip raises an error instead of
+    silently wiping the sheet."""
+    df = _read_worksheet_strict(name)
     if 0 <= idx < len(df):
         df = df.drop(index=idx).reset_index(drop=True)
         save_csv(name, df)
