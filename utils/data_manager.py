@@ -28,12 +28,15 @@ def _get_conn():
 # Google Sheets helpers (replaces CSV read/write)
 # ---------------------------------------------------------------------------
 
+_READ_TTL = 120  # seconds to cache worksheet reads (keeps API usage low)
+
+
 def load_csv(name: str) -> pd.DataFrame:
-    """Load a worksheet from Google Sheets. Returns an empty DataFrame if
-    the worksheet is empty or doesn't exist."""
+    """Load a worksheet from Google Sheets. Uses a short cache to stay
+    within the 60-reads-per-minute API quota."""
     try:
         conn = _get_conn()
-        df = conn.read(worksheet=name, ttl=0)
+        df = conn.read(worksheet=name, ttl=_READ_TTL)
         if df is None:
             return pd.DataFrame()
         # Drop fully-empty rows that gsheets sometimes returns
@@ -46,28 +49,31 @@ def load_csv(name: str) -> pd.DataFrame:
             df["date"] = pd.to_datetime(df["date"], errors="coerce")
         return df
     except Exception as e:
-        # Surface the error so silent failures are visible
         import streamlit as _st
         _st.warning(f"Could not load **{name}**: {e}")
         return pd.DataFrame()
 
 
+def _clear_read_cache() -> None:
+    """Bust the Streamlit cache so the next load_csv call fetches fresh data."""
+    st.cache_data.clear()
+
+
 def save_csv(name: str, df: pd.DataFrame) -> None:
     """Overwrite a worksheet in Google Sheets with the given DataFrame."""
     conn = _get_conn()
-    # Convert datetime columns to strings for Sheets compatibility
     df_out = df.copy()
     for col in df_out.columns:
         if pd.api.types.is_datetime64_any_dtype(df_out[col]):
             df_out[col] = df_out[col].dt.strftime("%Y-%m-%d")
-        # Also handle any date strings with time components
         if col == "date":
             df_out[col] = df_out[col].astype(str).str.split(" ").str[0]
     conn.update(worksheet=name, data=df_out)
+    _clear_read_cache()
 
 
 def _read_worksheet_strict(name: str) -> pd.DataFrame:
-    """Read a worksheet WITHOUT silencing errors.
+    """Read a worksheet WITHOUT caching or silencing errors.
     Used by write operations so a temporary read failure never causes
     an accidental overwrite of existing data."""
     conn = _get_conn()
@@ -85,8 +91,8 @@ def _read_worksheet_strict(name: str) -> pd.DataFrame:
 
 def append_csv_row(name: str, row: dict) -> None:
     """Append a single row to a Google Sheets worksheet.
-    Uses strict read so a connection blip raises an error instead of
-    silently overwriting all existing data."""
+    Uses strict (uncached) read so a connection blip raises an error
+    instead of silently overwriting all existing data."""
     df = _read_worksheet_strict(name)
     new_row = pd.DataFrame([row])
     df = pd.concat([df, new_row], ignore_index=True)
@@ -95,8 +101,8 @@ def append_csv_row(name: str, row: dict) -> None:
 
 def delete_csv_row(name: str, idx: int) -> None:
     """Delete a row by index from a Google Sheets worksheet.
-    Uses strict read so a connection blip raises an error instead of
-    silently wiping the sheet."""
+    Uses strict (uncached) read so a connection blip raises an error
+    instead of silently wiping the sheet."""
     df = _read_worksheet_strict(name)
     if 0 <= idx < len(df):
         df = df.drop(index=idx).reset_index(drop=True)
