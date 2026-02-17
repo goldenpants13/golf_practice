@@ -1,5 +1,5 @@
 """
-Practice Log — log ball-striking, putting, and short-game sessions.
+Practice Log — log ball-striking and putting sessions.
 """
 
 import sys
@@ -15,10 +15,8 @@ from utils.data_manager import (
     delete_csv_row,
     load_ball_striking,
     load_putting,
-    load_short_game,
     save_ball_striking_session,
     save_putting_session,
-    save_short_game_session,
 )
 
 st.set_page_config(page_title="Practice Log", page_icon="📝", layout="wide")
@@ -59,7 +57,7 @@ def _show_table_with_delete(raw_df, display_df, sheet_name, label, key_prefix):
 # ---------------------------------------------------------------------------
 # Tabs
 # ---------------------------------------------------------------------------
-tab_bs, tab_putt, tab_sg = st.tabs(["Ball Striking", "Putting", "Short Game"])
+tab_bs, tab_putt = st.tabs(["Ball Striking", "Putting"])
 
 # ========================  BALL STRIKING  ==================================
 with tab_bs:
@@ -200,46 +198,3 @@ with tab_putt:
         _show_table_with_delete(putt_df, display, "putting", "putting", "putt")
     else:
         st.info("No putting sessions logged yet.")
-
-
-# ========================  SHORT GAME  =====================================
-with tab_sg:
-    st.subheader("Short Game Session")
-    st.caption("Log any short-game practice that doesn't fit ball striking or putting.")
-
-    with st.form("short_game_form", clear_on_submit=True):
-        sg_date = st.date_input("Date", value=date.today(), key="sg_date")
-        sg_notes = st.text_area(
-            "What did you work on?",
-            placeholder="e.g. Bunker shots, pitch shots from 40 yards, flop shots...",
-            key="sg_notes",
-        )
-        sg_duration = st.number_input(
-            "Duration (minutes)", min_value=0, value=0, step=5, key="sg_dur"
-        )
-        submitted_sg = st.form_submit_button("Log Short Game Session", type="primary")
-
-    if submitted_sg:
-        if sg_notes.strip() or sg_duration > 0:
-            row = {
-                "date": sg_date.strftime("%Y-%m-%d"),
-                "notes": sg_notes.strip() if sg_notes.strip() else None,
-                "duration_min": sg_duration if sg_duration else None,
-            }
-            save_short_game_session(row)
-            st.success(f"Logged short game session on {sg_date.strftime('%b %d')}.")
-            st.rerun()
-        else:
-            st.warning("Add some notes or a duration before submitting.")
-
-    st.markdown("#### Recent Short Game Sessions")
-    sg_df = load_short_game()
-    if not sg_df.empty:
-        display = sg_df.copy()
-        if "date" in display.columns:
-            display["date"] = pd.to_datetime(display["date"]).dt.strftime("%b %d, %Y")
-        col_map = {"date": "Date", "notes": "Notes", "duration_min": "Duration (min)"}
-        display = display.rename(columns=col_map)
-        _show_table_with_delete(sg_df, display, "short_game", "short game", "sg")
-    else:
-        st.info("No short game sessions logged yet.")

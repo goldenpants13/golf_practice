@@ -77,7 +77,7 @@ with col_left:
         date_counts = pd.Series(0, index=all_days)
 
         # Count sessions per day across all categories
-        for name in ("ball_striking", "putting", "short_game", "testing", "three_hole_loop", "wedge_ladder"):
+        for name in ("ball_striking", "putting", "testing", "three_hole_loop", "wedge_ladder"):
             df = load_csv(name)
             if not df.empty and "date" in df.columns:
                 for d in pd.to_datetime(df["date"]).dt.normalize():
@@ -134,7 +134,6 @@ with col_right:
         labels = {
             "ball_striking": "Ball Striking",
             "putting": "Putting",
-            "short_game": "Short Game",
             "testing": "Short Game Testing",
             "three_hole_loop": "3-Hole Loop",
             "wedge_ladder": "Wedge Ladder",
@@ -143,7 +142,7 @@ with col_right:
             labels=[labels.get(k, k) for k in counts.keys()],
             values=list(counts.values()),
             hole=0.45,
-            marker=dict(colors=["#2e7d32", "#66bb6a", "#a5d6a7", "#1b5e20", "#4caf50", "#81c784"]),
+            marker=dict(colors=["#2e7d32", "#66bb6a", "#1b5e20", "#4caf50", "#81c784"]),
             textinfo="label+value",
         )])
         fig_pie.update_layout(
@@ -163,7 +162,7 @@ st.markdown("---")
 st.subheader("Recent Activity")
 
 recent_rows = []
-for name, label in [("ball_striking", "Ball Striking"), ("putting", "Putting"), ("short_game", "Short Game"), ("testing", "Short Game Testing"), ("three_hole_loop", "3-Hole Loop"), ("wedge_ladder", "Wedge Ladder")]:
+for name, label in [("ball_striking", "Ball Striking"), ("putting", "Putting"), ("testing", "Short Game Testing"), ("three_hole_loop", "3-Hole Loop"), ("wedge_ladder", "Wedge Ladder")]:
     df = load_csv(name)
     if not df.empty:
         df = df.copy()

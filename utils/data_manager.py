@@ -139,10 +139,6 @@ def load_putting() -> pd.DataFrame:
     return load_csv("putting")
 
 
-def load_short_game() -> pd.DataFrame:
-    return load_csv("short_game")
-
-
 def load_testing() -> pd.DataFrame:
     return load_csv("testing")
 
@@ -179,10 +175,6 @@ def save_putting_session(row: dict) -> None:
     append_csv_row("putting", row)
 
 
-def save_short_game_session(row: dict) -> None:
-    append_csv_row("short_game", row)
-
-
 def save_testing_session(row: dict) -> None:
     append_csv_row("testing", row)
 
@@ -202,7 +194,7 @@ def save_wedge_ladder_session(row: dict) -> None:
 def all_practice_dates() -> List[date]:
     """Return a sorted list of all unique dates across all practice types."""
     dates = set()
-    for name in ("ball_striking", "putting", "short_game", "testing", "three_hole_loop", "wedge_ladder"):
+    for name in ("ball_striking", "putting", "testing", "three_hole_loop", "wedge_ladder"):
         df = load_csv(name)
         if not df.empty and "date" in df.columns:
             for d in pd.to_datetime(df["date"]).dt.date:
@@ -213,7 +205,7 @@ def all_practice_dates() -> List[date]:
 def practice_session_counts() -> Dict[str, int]:
     """Return total session counts per practice category."""
     counts = {}
-    for name in ("ball_striking", "putting", "short_game", "testing", "three_hole_loop", "wedge_ladder"):
+    for name in ("ball_striking", "putting", "testing", "three_hole_loop", "wedge_ladder"):
         df = load_csv(name)
         counts[name] = len(df)
     return counts
