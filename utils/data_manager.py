@@ -33,7 +33,7 @@ def load_csv(name: str) -> pd.DataFrame:
     the worksheet is empty or doesn't exist."""
     try:
         conn = _get_conn()
-        df = conn.read(worksheet=name, ttl="0")
+        df = conn.read(worksheet=name, ttl=0)
         if df is None:
             return pd.DataFrame()
         # Drop fully-empty rows that gsheets sometimes returns
@@ -45,7 +45,10 @@ def load_csv(name: str) -> pd.DataFrame:
             df["date"] = df["date"].astype(str).str.split(" ").str[0]
             df["date"] = pd.to_datetime(df["date"], errors="coerce")
         return df
-    except Exception:
+    except Exception as e:
+        # Surface the error so silent failures are visible
+        import streamlit as _st
+        _st.warning(f"Could not load **{name}**: {e}")
         return pd.DataFrame()
 
 
@@ -68,7 +71,7 @@ def _read_worksheet_strict(name: str) -> pd.DataFrame:
     Used by write operations so a temporary read failure never causes
     an accidental overwrite of existing data."""
     conn = _get_conn()
-    df = conn.read(worksheet=name, ttl="0")
+    df = conn.read(worksheet=name, ttl=0)
     if df is None:
         return pd.DataFrame()
     df = df.dropna(how="all")
