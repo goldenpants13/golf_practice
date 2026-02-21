@@ -86,7 +86,11 @@ def swedish_level_label(total_score: float) -> str:
 # ---------------------------------------------------------------------------
 # Test selector
 # ---------------------------------------------------------------------------
-TEST_NAMES = ["Lag Drill", "Swedish Drill", "Stack Putting Session", "3-Footer Drill"]
+LUKE_DONALD_DISTANCES = [4, 5, 6, 7, 8]
+LUKE_DONALD_HOLES = [1, 2, 3, 4]
+LUKE_DONALD_GOAL = 15  # out of 20
+
+TEST_NAMES = ["Lag Drill", "Swedish Drill", "Luke Donald Drill", "Stack Putting Session"]
 
 selected_test = st.radio("Select Test", TEST_NAMES, horizontal=True)
 
@@ -267,14 +271,39 @@ elif selected_test == "Stack Putting Session":
     )
 
 # ---------------------------------------------------------------------------
-# 3-Footer Drill (placeholder)
+# Luke Donald Drill
 # ---------------------------------------------------------------------------
-elif selected_test == "3-Footer Drill":
-    st.subheader("3-Footer Drill")
-    st.info(
-        "**3-Footer Drill** is a placeholder. Tell me how this test works "
-        "(number of putts, make percentage target, etc.) and I'll build the form."
-    )
+elif selected_test == "Luke Donald Drill":
+    st.subheader("Luke Donald Drill")
+    st.caption(f"5 putts from 5 distances (4–8ft) at 4 hole locations. Goal: {LUKE_DONALD_GOAL}/20 makes.")
+
+    with st.form("luke_donald_form", clear_on_submit=True):
+        ld_date = st.date_input("Date", value=date.today(), key="ld_date")
+
+        makes = {}
+        cols = st.columns(4)
+        for hi, hole in enumerate(LUKE_DONALD_HOLES):
+            with cols[hi]:
+                st.markdown(f"**Hole {hole}**")
+                for dist in LUKE_DONALD_DISTANCES:
+                    field_key = f"ld_h{hole}_{dist}ft"
+                    makes[field_key] = st.checkbox(f"{dist} ft", key=field_key)
+
+        submitted = st.form_submit_button("Submit Luke Donald Drill", type="primary")
+
+    if submitted:
+        total_makes = sum(1 for v in makes.values() if v)
+        row = {"date": ld_date.strftime("%Y-%m-%d"), "test_type": "Luke Donald Drill"}
+        for key, made in makes.items():
+            row[key] = 1 if made else 0
+        row["score"] = total_makes
+        save_putting_testing_session(row)
+
+        if total_makes >= LUKE_DONALD_GOAL:
+            st.success(f"**{total_makes}/20** — Goal reached! 🎯")
+        else:
+            st.warning(f"**{total_makes}/20** — Goal is {LUKE_DONALD_GOAL}/20. Keep grinding!")
+        st.rerun()
 
 # ---------------------------------------------------------------------------
 # Session History (filtered by selected test)
@@ -310,6 +339,13 @@ if not hist_df.empty:
             if "putting_hcp" in filtered.columns:
                 latest_hcp = pd.to_numeric(filtered["putting_hcp"], errors="coerce").iloc[-1]
                 mcol4.metric("Latest HCP", f"{latest_hcp:+.1f}")
+        elif selected_test == "Luke Donald Drill":
+            mcol1, mcol2, mcol3, mcol4 = st.columns(4)
+            mcol1.metric("Total Sessions", len(filtered))
+            mcol2.metric("Best Score", f"{int(filtered['score'].max())}/20")
+            mcol3.metric("Avg Score", f"{filtered['score'].mean():.1f}/20")
+            goal_met = (filtered["score"] >= LUKE_DONALD_GOAL).sum()
+            mcol4.metric("Goal Hit", f"{goal_met}/{len(filtered)}")
         else:
             mcol1, mcol2 = st.columns(2)
             mcol1.metric("Total Sessions", len(filtered))
@@ -351,6 +387,40 @@ if not hist_df.empty:
                     xaxis_title="Date",
                     height=400,
                     margin=dict(l=40, r=100, t=20, b=40),
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            elif selected_test == "Luke Donald Drill":
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=trend["date"], y=trend["score"],
+                    mode="lines+markers",
+                    line=dict(color="#66bb6a", width=2),
+                    marker=dict(size=8),
+                    name="Makes",
+                    hovertemplate="Date: %{x|%b %d}<br>Makes: %{y}/20<extra></extra>",
+                ))
+                if len(trend) >= 3:
+                    trend["score_ma"] = trend["score"].rolling(window=3, min_periods=1).mean()
+                    fig.add_trace(go.Scatter(
+                        x=trend["date"], y=trend["score_ma"],
+                        mode="lines",
+                        line=dict(color="#ffffff", width=3),
+                        name="3-Session Avg",
+                    ))
+                fig.add_hline(
+                    y=LUKE_DONALD_GOAL, line_dash="dash", line_color="#ffa726",
+                    annotation_text=f"Goal: {LUKE_DONALD_GOAL}/20",
+                    annotation_position="right",
+                )
+                fig.update_layout(
+                    yaxis_title="Makes (out of 20)",
+                    xaxis_title="Date",
+                    yaxis=dict(range=[0, 21]),
+                    height=300,
+                    margin=dict(l=40, r=80, t=20, b=40),
                     paper_bgcolor="rgba(0,0,0,0)",
                     plot_bgcolor="rgba(0,0,0,0)",
                     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
@@ -409,6 +479,33 @@ if not hist_df.empty:
                     )
                     st.plotly_chart(fig_bar, use_container_width=True)
 
+        # Distance make % breakdown (Luke Donald specific)
+        if selected_test == "Luke Donald Drill" and len(filtered) >= 1:
+            dist_pcts = {}
+            for dist in LUKE_DONALD_DISTANCES:
+                cols_for_dist = [f"ld_h{h}_{dist}ft" for h in LUKE_DONALD_HOLES]
+                present = [c for c in cols_for_dist if c in filtered.columns]
+                if present:
+                    vals = filtered[present].apply(pd.to_numeric, errors="coerce")
+                    dist_pcts[f"{dist}ft"] = vals.values.mean() * 100
+            if dist_pcts:
+                fig_bar = go.Figure(data=[go.Bar(
+                    x=list(dist_pcts.keys()),
+                    y=list(dist_pcts.values()),
+                    marker_color=["#2e7d32", "#388e3c", "#43a047", "#4caf50", "#66bb6a"],
+                    text=[f"{v:.0f}%" for v in dist_pcts.values()],
+                    textposition="outside",
+                )])
+                fig_bar.update_layout(
+                    yaxis_title="Make %",
+                    yaxis=dict(range=[0, 105]),
+                    height=280,
+                    margin=dict(l=40, r=20, t=20, b=40),
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                )
+                st.plotly_chart(fig_bar, use_container_width=True)
+
         # History table with delete
         display = filtered.copy()
         if "date" in display.columns:
@@ -418,8 +515,11 @@ if not hist_df.empty:
         for label, col in LAG_FIELDS:
             col_map[col] = label
         display = display.rename(columns={k: v for k, v in col_map.items() if k in display.columns})
-        drop_cols = [c for c in display.columns if c == "Test"]
-        display = display.drop(columns=drop_cols, errors="ignore")
+        # Drop internal columns from display
+        drop_cols = ["Test"]
+        if selected_test == "Luke Donald Drill":
+            drop_cols += [c for c in display.columns if c.startswith("ld_h")]
+        display = display.drop(columns=[c for c in drop_cols if c in display.columns], errors="ignore")
 
         sorted_display = display.sort_values("Date", ascending=False) if "Date" in display.columns else display
         original_indices = sorted_display.index.tolist()
